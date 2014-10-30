@@ -1,10 +1,13 @@
 #!usr/lib/python2.7
 
-# matchbot is a script to do things with stuff.
-# you point it at a space with subpages and categories
-# and it tells you who matches whom
+# MatchBot is MediaWiki bot that finds and notifies entities of matches
+# based on categories on profile pages. It will be incorporated into the en.wp
+# Co-op program and should be able to be extended to match people with projects
+# in the IdeaLab.
+# 
+# In early development as of Oct 31, 2014.
 
-# matchbot currently runs in this test space: 
+# MatchBot currently runs in this test space: 
 # https://test.wikipedia.org/wiki/Wikipedia:Co-op
 
 # All mentor and learner profile pages are subpages of Wikipedia:Co-op.
@@ -18,9 +21,7 @@
 #   Wants to do research
 #   Wants to edit
 
-
 import mwclient
-
 import matchbot_settings
 
 useragent = 'MatchBot, based on mwclient v0.6.5. Run by User:Fhocutt, frances.hocutt@gmail.com'
