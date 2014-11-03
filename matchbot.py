@@ -15,19 +15,42 @@
 # Category tags: 
 #   Co-op (maybe not necessary because implied by subpage status?)
 #   Co-op mentor
-#   Co-op learner
+#   Co-op Learner
 #   Teaches research
 #   Teaches editing
 #   Wants to do research
 #   Wants to edit
 
 import mwclient
+
+# Config file with login information
 import matchbot_settings
 
-useragent = 'MatchBot, based on mwclient v0.6.5. Run by User:Fhocutt, frances.hocutt@gmail.com'
+useragent = 'MatchBot, based on mwclient v0.6.5. Run by User:Fhocutt, '\
+              'frances.hocutt@gmail.com'
 
-site = mwclient.Site(('https', 'test.wikipedia.org'), clients_useragent=useragent)
-# site.login(matchbot_settings.username, matchbot_settings.password)
+# Not currently used
+mentor_cats = {'Teaches research', 'Teaches editing'}
+learner_cats = {'Wants to do research', 'Wants to edit'}
 
-for page in site.Categories['Co-op']:
-    print page.page_title
+# Initializing site + logging in
+site = mwclient.Site(('https', 'test.wikipedia.org'), 
+         clients_useragent=useragent)
+site.login(matchbot_settings.username, matchbot_settings.password)
+
+# Can we list-by-category?
+print "Learners:"
+for profile in site.Categories['Co-op learner']:
+    print profile.page_title
+
+print "\nMentors:"
+for profile in site.Categories['Co-op mentor']:
+    print profile.page_title
+
+# Now edit the learner's wiki page with a list of relevant mentors
+for profile in site.Categories['Wants to edit']:
+    text = profile.text()
+    for mentor in site.Categories['Teaches editing']:
+        text = text + '\n\n' + mentor.page_title
+    text = text + '\n\nare interested in teaching editing.'
+    profile.save(text, summary = 'Testing category matching + page editing')
