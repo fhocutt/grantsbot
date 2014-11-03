@@ -4,6 +4,8 @@
 # based on categories on profile pages. It will be incorporated into the en.wp
 # Co-op program and should be able to be extended to match people with projects
 # in the IdeaLab.
+#
+# Released under GPL v3.
 # 
 # In early development as of Oct 31, 2014.
 
