@@ -40,14 +40,19 @@ site = mwclient.Site(('https', 'test.wikipedia.org'),
          clients_useragent=useragent)
 site.login(matchbot_settings.username, matchbot_settings.password)
 
-# Can we list-by-category?
+# Go through learners, get corresponding talk page title
+# TODO: leave a message on the talk page.
+
+talk_page_titles = []
+
 print "Learners:"
 for profile in site.Categories['Co-op learner']:
     print profile.page_title
+    talk_page_titles.append(u'%s:%s' % (site.namespaces[5], profile.page_title))
 
-print "\nMentors:"
-for profile in site.Categories['Co-op mentor']:
-    print profile.page_title
+# debugging print statements
+print talk_page_titles
+print site.pages[talk_page_titles[0]]
 
 # Now edit the learner's wiki page with a list of relevant mentors
 for profile in site.Categories['Wants to edit']:
