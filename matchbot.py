@@ -25,7 +25,7 @@
 
 import mwclient
 
-# Config file with login information
+# Config file with login information and user-agent string
 import matchbot_settings
 
 def get_talk_page(page):
@@ -46,9 +46,6 @@ def get_talk_page(page):
 
 
 
-useragent = 'MatchBot, based on mwclient v0.6.5. Run by User:Fhocutt, '\
-              'frances.hocutt@gmail.com'
-
  
 # FIXME: works, but there's inconsistency between site.Pages['Category:Blah']
 #        and site.Categories['Blah']; could be confusing.
@@ -56,10 +53,13 @@ mentor_cats = ['Teaches research', 'Teaches editing']
 learner_cats = ['Category:Wants to do research', 'Category:Wants to edit']
 category_dict = {k:v for (k,v) in zip(learner_cats, mentor_cats)}
 
-# Initializing site + logging in
-site = mwclient.Site(('https', 'test.wikipedia.org'), 
-         clients_useragent=useragent)
-site.login(matchbot_settings.username, matchbot_settings.password)
+
+
+if __name__ == 'main':
+    # Initializing site + logging in
+    site = mwclient.Site(('https', 'test.wikipedia.org'), 
+                         clients_useragent=matchbot_settings.useragent)
+    site.login(matchbot_settings.username, matchbot_settings.password)
 
 # Go through learners, find mentors for each learner category, post
 # matching mentors to learner's talk page.
@@ -68,27 +68,36 @@ site.login(matchbot_settings.username, matchbot_settings.password)
 
 # Anyone tagged with 'Co-op learner' is a learner
 # site.Categories['Foo'] is a List(?) of Pages with 'Category:Foo' (iterable)
-for profile in site.Categories['Co-op learner']:
-    profile_talk = get_talk_page(profile)
-    profile_talk_text = u''
+    for profile in site.Categories['Co-op learner']:
+        profile_talk = get_talk_page(profile)
 
     # get a list of categories on the learner's page
-    categories = profile.categories()
-    for cat in categories:
+        categories = profile.categories()
+
+    # feed the categories to a method
+    # method returns categories we care about
+
+    # for the relevant categories: we want mentors
+
+    # once we have mentors we can build the added(?) text string
+
+
+        for cat in categories:
         # for the ones we can match on...
-        if cat.name in category_dict:
-            matchcat = category_dict[cat.name]
+            if cat.name in category_dict:
+                matchcat = category_dict[cat.name]
             # List the mentors who've marked the corresponding category
-            mentors = site.Categories[matchcat]
-            for mentor in mentors:
-                talk_page_text += u'\n\n%s can mentor you! '\
-                                  u'(%s)' % (mentor.page_title, matchcat)
+                mentors = site.Categories[matchcat]
+                for mentor in mentors:
+                    profile_talk_text += u'\n\n%s can mentor you! '\
+                                      u'(%s)' % (mentor.page_title, matchcat)
 
     # once done with all relevant categories, post an invitation
-    # NOTE this overwrites any existing text on the talk page
-    talk_page.save(talk_page_text, summary = 'Notifying of available mentors')
+    # NOTE this overwrites any existing text on the talk page!
+        profile_talk.save(profile_talk_text, summary = 
+                          'Notifying of available mentors')
 
-#    talk_page.save(talk_page_text, summary = 'clearing out tests')
+#        talk_page.save(talk_page_text, summary = 'clearing out tests')
 
 
 ##################
