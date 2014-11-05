@@ -31,33 +31,58 @@ import matchbot_settings
 useragent = 'MatchBot, based on mwclient v0.6.5. Run by User:Fhocutt, '\
               'frances.hocutt@gmail.com'
 
-# Not currently used
-mentor_cats = {'Teaches research', 'Teaches editing'}
-learner_cats = {'Wants to do research', 'Wants to edit'}
+ 
+# FIXME: works, but there's inconsistency between site.Pages['Category:Blah']
+#        and site.Categories['Blah']; could be confusing.
+mentor_cats = ['Teaches research', 'Teaches editing']
+learner_cats = ['Category:Wants to do research', 'Category:Wants to edit']
+category_dict = {k:v for (k,v) in zip(learner_cats, mentor_cats)}
 
 # Initializing site + logging in
 site = mwclient.Site(('https', 'test.wikipedia.org'), 
          clients_useragent=useragent)
 site.login(matchbot_settings.username, matchbot_settings.password)
 
-# Go through learners, get corresponding talk page title
-# TODO: leave a message on the talk page.
+# Go through learners, find mentors for each learner category, post
+# matching mentors to learner's talk page.
 
-talk_page_titles = []
+# FIXME: Icky nested loops to refactor!
 
-print "Learners:"
+# Anyone tagged with 'Co-op learner' is a learner
+# site.Categories['Foo'] is a List(?) of Pages with 'Category:Foo' (iterable)
 for profile in site.Categories['Co-op learner']:
-    print profile.page_title
-    talk_page_titles.append(u'%s:%s' % (site.namespaces[5], profile.page_title))
+    # Get the corresponding talk page title
+    talk_page_title = u'%s:%s' % (site.namespaces[5], profile.page_title)
 
-# debugging print statements
-print talk_page_titles
-print site.pages[talk_page_titles[0]]
+    # New Page object for the talk page
+    talk_page = site.Pages[talk_page_title]
+    talk_page_text = u'' # NOTE this will delete existing text
 
-# Now edit the learner's wiki page with a list of relevant mentors
-for profile in site.Categories['Wants to edit']:
-    text = profile.text()
-    for mentor in site.Categories['Teaches editing']:
-        text = text + '\n\n' + mentor.page_title
-    text = text + '\n\nare interested in teaching editing.'
-    profile.save(text, summary = 'Testing category matching + page editing')
+    # get a list of categories on the learner's page
+    categories = profile.categories()
+    for cat in categories:
+        # for the ones we can match on...
+        if cat.name in category_dict:
+            matchcat = category_dict[cat.name]
+            # List the mentors who've marked the corresponding category
+            mentors = site.Categories[matchcat]
+            for mentor in mentors:
+                talk_page_text += u'\n\n%s can mentor you! '\
+                                  u'(%s)' % (mentor.page_title, matchcat)
+
+    # once done with all relevant categories, post an invitation
+    # NOTE this overwrites any existing text on the talk page
+    talk_page.save(talk_page_text, summary = 'Notifying of available mentors')
+
+#    talk_page.save(talk_page_text, summary = 'clearing out tests')
+
+
+##################
+# Another approach: go through each category; possibly less efficient?
+# # now edit the learner's wiki page with a list of relevant mentors
+# for profile in site.categories['wants to edit']:
+#     text = profile.text()
+#     for mentor in site.categories['teaches editing']:
+#         text = text + '\n\n' + mentor.page_title
+#     text = text + '\n\nare interested in teaching editing.'
+# #    profile.save(text, summary = 'testing category matching + page editing')
