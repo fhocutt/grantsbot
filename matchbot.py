@@ -28,6 +28,24 @@ import mwclient
 # Config file with login information
 import matchbot_settings
 
+def get_talk_page(page):
+    """Given a Page, return a Page for the talk page from the
+    corresponding namespace.
+
+    Assumes that odd values for page.namespace mean that the given Page
+    is already a talk page and passes it back.
+    """
+    if page.namespace % 2 == 0:
+        talk_ns = page.namespace + 1
+    else:
+        return page
+
+    talk_page_title = u'%s:%s' % (page.site.namespaces[talk_ns],
+                                  page.page_title)
+    return site.Pages[talk_page_title]
+
+
+
 useragent = 'MatchBot, based on mwclient v0.6.5. Run by User:Fhocutt, '\
               'frances.hocutt@gmail.com'
 
@@ -51,12 +69,8 @@ site.login(matchbot_settings.username, matchbot_settings.password)
 # Anyone tagged with 'Co-op learner' is a learner
 # site.Categories['Foo'] is a List(?) of Pages with 'Category:Foo' (iterable)
 for profile in site.Categories['Co-op learner']:
-    # Get the corresponding talk page title
-    talk_page_title = u'%s:%s' % (site.namespaces[5], profile.page_title)
-
-    # New Page object for the talk page
-    talk_page = site.Pages[talk_page_title]
-    talk_page_text = u'' # NOTE this will delete existing text
+    profile_talk = get_talk_page(profile)
+    profile_talk_text = u''
 
     # get a list of categories on the learner's page
     categories = profile.categories()
