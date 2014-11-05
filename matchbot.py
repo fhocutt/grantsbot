@@ -46,14 +46,32 @@ def get_talk_page(page):
 
 
 
- 
 # FIXME: works, but there's inconsistency between site.Pages['Category:Blah']
 #        and site.Categories['Blah']; could be confusing.
 mentor_cats = ['Teaches research', 'Teaches editing']
 learner_cats = ['Category:Wants to do research', 'Category:Wants to edit']
 category_dict = {k:v for (k,v) in zip(learner_cats, mentor_cats)}
 
+#TODO
+def matchcat(categories, category_dict):
+    pass
 
+#TODO
+def findmentors():
+    pass
+
+#TODO
+def choosementor(mentors):
+    """Given a list of mentors (?) return one mentor to contact."""
+    # unclear whether this will be as a name or as a Page item
+    pass
+
+#TODO
+def buildgreeting(learner, mentor, skill):
+    """Puts the string together that can be posted to a talk page or
+       Flow board to introduce a potential mentor to a learner.
+    """
+    return ''
 
 if __name__ == 'main':
     # Initializing site + logging in
@@ -72,12 +90,14 @@ if __name__ == 'main':
     # get a list of categories on the learner's page
         categories = profile.categories()
 
+#possible approach:
+#        learner_cats = matchcat(categories, category_dict)
     # feed the categories to a method
     # method returns categories we care about
-
-    # for the relevant categories: we want mentors
-
-    # once we have mentors we can build the added(?) text string
+    # for the relevant categories, fetch mentors
+    # choose a mentor
+    # build a greeting
+    # post the greeting
 
 
         for cat in categories:
@@ -86,10 +106,10 @@ if __name__ == 'main':
                 matchcat = category_dict[cat.name]
             # List the mentors who've marked the corresponding category
                 mentors = site.Categories[matchcat]
-                for mentor in mentors:
-                    profile_talk_text += u'\n\n%s can mentor you! '\
-                                      u'(%s)' % (mentor.page_title, matchcat)
-
+                mentor = choosementor(mentors)
+                # FIXME: figure out types for this, this is sketchy
+                greeting = buildgreeting(profile.name, mentor, matchcat)
+                profile_talk_text += greeting
     # once done with all relevant categories, post an invitation
     # NOTE this overwrites any existing text on the talk page!
         profile_talk.save(profile_talk_text, summary = 
