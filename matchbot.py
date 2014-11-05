@@ -64,8 +64,6 @@ if __name__ == 'main':
 # Go through learners, find mentors for each learner category, post
 # matching mentors to learner's talk page.
 
-# FIXME: Icky nested loops to refactor!
-
 # Anyone tagged with 'Co-op learner' is a learner
 # site.Categories['Foo'] is a List(?) of Pages with 'Category:Foo' (iterable)
     for profile in site.Categories['Co-op learner']:
@@ -98,14 +96,3 @@ if __name__ == 'main':
                           'Notifying of available mentors')
 
 #        talk_page.save(talk_page_text, summary = 'clearing out tests')
-
-
-##################
-# Another approach: go through each category; possibly less efficient?
-# # now edit the learner's wiki page with a list of relevant mentors
-# for profile in site.categories['wants to edit']:
-#     text = profile.text()
-#     for mentor in site.categories['teaches editing']:
-#         text = text + '\n\n' + mentor.page_title
-#     text = text + '\n\nare interested in teaching editing.'
-# #    profile.save(text, summary = 'testing category matching + page editing')
