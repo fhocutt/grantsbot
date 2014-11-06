@@ -1,20 +1,18 @@
 #!usr/lib/python2.7
-
+#
 # MatchBot is MediaWiki bot that finds and notifies entities of matches
 # based on categories on profile pages. It will be incorporated into the en.wp
 # Co-op program and should be able to be extended to match people with projects
 # in the IdeaLab.
 #
 # Released under GPL v3.
-# 
-# In early development as of Oct 31, 2014.
-
+#
 # MatchBot currently runs in this test space: 
 # https://test.wikipedia.org/wiki/Wikipedia:Co-op
-
+#
 # All mentor and learner profile pages are subpages of Wikipedia:Co-op.
-
-# Category tags: 
+#
+# Test category tags: 
 #   Co-op (maybe not necessary because implied by subpage status?)
 #   Co-op mentor
 #   Co-op Learner
@@ -22,11 +20,24 @@
 #   Teaches editing
 #   Wants to do research
 #   Wants to edit
+#
+# For each page tagged "Co-op learner", MatchBot v0.1.0 leaves a message on
+# the corresponding talk page with the name of a possible mentor (one for
+# each learning interest category on the page).
+
 
 import mwclient
 
 # Config file with login information and user-agent string
 import matchbot_settings
+
+
+# TODO: works, but there's inconsistency between site.Pages['Category:Blah']
+#        and site.Categories['Blah']; could be confusing. mwclient issue.
+mentor_cats = ['Teaches research', 'Teaches editing']
+learner_cats = ['Category:Wants to do research', 'Category:Wants to edit']
+category_dict = {k:v for (k,v) in zip(learner_cats, mentor_cats)}
+
 
 def get_talk_page(page):
     """Given a Page, return a Page for the talk page from the
@@ -43,14 +54,6 @@ def get_talk_page(page):
     talk_page_title = u'%s:%s' % (page.site.namespaces[talk_ns],
                                   page.page_title)
     return site.Pages[talk_page_title]
-
-
-
-# FIXME: works, but there's inconsistency between site.Pages['Category:Blah']
-#        and site.Categories['Blah']; could be confusing.
-mentor_cats = ['Teaches research', 'Teaches editing']
-learner_cats = ['Category:Wants to do research', 'Category:Wants to edit']
-category_dict = {k:v for (k,v) in zip(learner_cats, mentor_cats)}
 
 #TODO
 def matchcat(categories, category_dict):
@@ -99,11 +102,8 @@ if __name__ == '__main__':
                          clients_useragent=matchbot_settings.useragent)
     site.login(matchbot_settings.username, matchbot_settings.password)
 
-# Go through learners, find mentors for each learner category, post
-# matching mentors to learner's talk page.
 
-# Anyone tagged with 'Co-op learner' is a learner
-# site.Categories['Foo'] is a List(?) of Pages with 'Category:Foo' (iterable)
+    # site.Categories['Foo'] is a List(?) of Pages with 'Category:Foo'
     for profile in site.Categories['Co-op learner']:
         profile_talk = get_talk_page(profile)
         profile_talk_text = u''                  # to replace text
