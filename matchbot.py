@@ -60,20 +60,40 @@ def matchcat(categories, category_dict):
 def findmentors():
     pass
 
-#TODO
-def choosementor(mentors):
-    """Given a list of mentors (?) return one mentor to contact."""
-    # unclear whether this will be as a name or as a Page item
-    pass
+def getusername(profile_title):
+    """Strips the namespace and Co-op page from profile titles (Co-op
+    subpages). Returns the username as a string. If neither
+    'Wikipedia:' nor 'Co-op/' is present at the beginning of the string
+    returns the original string.
+    """
+    if profile_title[:10] == u'Wikipedia:':
+        profile_title = profile_title.strip(u'Wikipedia:')
 
-#TODO
+    if profile_title[:6] == u'Co-op/':
+        profile_title = profile_title.strip(u'Co-op/')
+
+    return profile_title
+
+
+def choosementor(mentors):
+    """Given a list of mentor names/profile titles chooses one mentor
+    to recommend. Returns the mentor name or profile title as a string.
+    """
+    return mentors[0]
+
+
 def buildgreeting(learner, mentor, skill):
     """Puts the string together that can be posted to a talk page or
        Flow board to introduce a potential mentor to a learner.
     """
-    return ''
+    greeting = 'Hello, [[User:%(l)s|%(l)s]]! Thank you for your interest in '\
+               'the Co-op. [[User:%(m)s|%(m)s]] has listed "%(s)s" in their '\
+               'mentorship profile. '\
+               'Leave them a message on their talk page and see if you want '\
+               'to work together!' % {'l': learner, 'm': mentor, 's': skill}
+    return greeting
 
-if __name__ == 'main':
+if __name__ == '__main__':
     # Initializing site + logging in
     site = mwclient.Site(('https', 'test.wikipedia.org'), 
                          clients_useragent=matchbot_settings.useragent)
@@ -86,33 +106,33 @@ if __name__ == 'main':
 # site.Categories['Foo'] is a List(?) of Pages with 'Category:Foo' (iterable)
     for profile in site.Categories['Co-op learner']:
         profile_talk = get_talk_page(profile)
+        profile_talk_text = u''                  # to replace text
+#       profile_talk_text = profile_talk.text()   # to append text
 
-    # get a list of categories on the learner's page
+        # get a list of categories on the learner's page
         categories = profile.categories()
 
-#possible approach:
-#        learner_cats = matchcat(categories, category_dict)
-    # feed the categories to a method
-    # method returns categories we care about
-    # for the relevant categories, fetch mentors
-    # choose a mentor
-    # build a greeting
-    # post the greeting
-
-
         for cat in categories:
-        # for the ones we can match on...
+            # for the ones we can match on...
             if cat.name in category_dict:
                 matchcat = category_dict[cat.name]
-            # List the mentors who've marked the corresponding category
+
+                # Make a collection of mentors who marked the matching category
                 mentors = site.Categories[matchcat]
-                mentor = choosementor(mentors)
-                # FIXME: figure out types for this, this is sketchy
-                greeting = buildgreeting(profile.name, mentor, matchcat)
-                profile_talk_text += greeting
-    # once done with all relevant categories, post an invitation
-    # NOTE this overwrites any existing text on the talk page!
+                mentorprofiles = []
+                for page in mentors:
+                    mentorprofiles.append(page.page_title) 
+
+                mentor = getusername(choosementor(mentorprofiles))
+                learner = getusername(profile.name)
+
+                greeting = buildgreeting(learner, mentor, matchcat)
+                profile_talk_text += (u'\n\n' + greeting)
+        # once done with all relevant categories, post invitations
         profile_talk.save(profile_talk_text, summary = 
                           'Notifying of available mentors')
 
+####
+# Debugging and profile talk page clean-up.
+#        print profile_talk_text
 #        talk_page.save(talk_page_text, summary = 'clearing out tests')
