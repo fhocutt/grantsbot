@@ -14,7 +14,7 @@ import flow_mw_settings as mwcreds
 
 if __name__ == '__main__':
     # Initializing site + logging in
-    site = mwclient.Site(('https', 'en.wikipedia.org'),
+    site = mwclient.Site(('https', 'test.wikipedia.org'),
                          clients_useragent=mwcreds.useragent)
     site.login(mwcreds.username, mwcreds.password)
     print "You are logged in as %s." % mwcreds.username
@@ -44,3 +44,25 @@ if __name__ == '__main__':
                       titles = 'Wikipedia:Co-op/Mentorship match',
                       prop = 'flowinfo')
     pp.pprint(query3)
+
+    # query to fetch user who made the first revision
+    # /w/api.php?action=query&prop=revisions&format=json&rvdir=newer&titles=Wikipedia%3ACo-op%2FPerson2
+
+    #could theoretically do this for more than one user at a time
+    titles = ['Wikipedia:Co-op/Person2']
+    titlestr = '|'.join(titles)
+
+    kwargs4 = {'action': 'query',
+               'prop': 'revisions',
+               'rvdir': 'newer',
+               'titles': titlestr,
+               'rvlimit': 1,
+               'indexpageids': ''}
+    query4 = site.api(**kwargs4)
+    pp.pprint(query4)
+
+    pages = query4['query']['pages']
+    pageid = query4['query']['pageids'][0]
+    user = pages[pageid]['revisions'][0]['user']
+
+    print user
