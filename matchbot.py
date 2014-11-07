@@ -18,8 +18,10 @@
 #   Co-op Learner
 #   Teaches research
 #   Teaches editing
+#   Teaches template writing
 #   Wants to do research
 #   Wants to edit
+#   Wants to write templates
 #
 # For each page tagged "Co-op learner", MatchBot v0.1.0 leaves a message on
 # the corresponding talk page with the name of a possible mentor (one for
@@ -136,7 +138,9 @@ if __name__ == '__main__':
                 except (matcherrors.MatchError, IndexError):
                     greeting = u'Oops, we don\'t have a mentor for you! '\
                                u'No mentors have listed "%s".' % matchcat
-
+                    profile_text = (profile.text() +
+                                    '[[Category:Orphaned request]]')
+                    profile.save(profile_text)
                 profile_talk_text += (u'\n\n' + greeting)
         # once done with all relevant categories, post invitations
         profile_talk.save(profile_talk_text, summary = 
