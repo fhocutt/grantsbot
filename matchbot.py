@@ -30,12 +30,12 @@ import mwclient
 
 # Config file with login information and user-agent string
 import matchbot_settings
-
+import matcherrors
 
 # TODO: works, but there's inconsistency between site.Pages['Category:Blah']
 #        and site.Categories['Blah']; could be confusing. mwclient issue.
-mentor_cats = ['Teaches research', 'Teaches editing']
-learner_cats = ['Category:Wants to do research', 'Category:Wants to edit']
+mentor_cats = ['Teaches research', 'Teaches editing', 'Teaches template writing']
+learner_cats = ['Category:Wants to do research', 'Category:Wants to edit', 'Category:Wants to write templates']
 category_dict = {k:v for (k,v) in zip(learner_cats, mentor_cats)}
 
 
