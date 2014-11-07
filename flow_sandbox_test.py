@@ -66,3 +66,16 @@ if __name__ == '__main__':
     user = pages[pageid]['revisions'][0]['user']
 
     print user
+
+#   /w/api.php?action=query&list=categorymembers&format=json&cmtitle=Category%3AWants%20to%20edit&cmprop=ids|title|timestamp&cmlimit=max&cmsort=timestamp&cmdir=older&cmend=2014-11-05T01%3A12%3A00Z&indexpageids=
+    categoryname = 'Wants to learn to edit'
+    timelastchecked = '2014-11-05T01%3A12%3A00Z'
+    recentkwargs = {'action': 'query',
+                    'list': 'categorymembers',
+                    'cmtitle': categoryname,
+                    'cmprop': 'ids|title|timestamp',
+                    'cmlimit': 'max',
+                    'cmsort': 'timestamp',
+                    'cmdir': 'older',
+                    'cmend': timelastchecked,
+                    'indexpageids': ''}
