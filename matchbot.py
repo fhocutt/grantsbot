@@ -122,29 +122,30 @@ if __name__ == '__main__':
                 try:
                     # Make a collection of mentors who marked the matching category
                     mentors = site.Categories[matchcat]
-
-                # first stab at error handling etc.
-                    if not mentors:
-                        raise MatchError
                     mentorprofiles = []
+
                     for page in mentors:
                         mentorprofiles.append(page.page_title) 
+
+                if mentorprofiles == []:
+                        raise matcherrors.MatchError
 
                     mentor = getusername(choosementor(mentorprofiles))
                     learner = getusername(profile.name)
 
                     greeting = buildgreeting(learner, mentor, matchcat)
-                # FIXME this is kludgy and probably fragile; need MatchError?
-                except (matcherrors.MatchError, IndexError):
+
+                # if no match is found
+                except (matcherrors.MatchError):
                     greeting = u'Oops, we don\'t have a mentor for you! '\
                                u'No mentors have listed "%s".' % matchcat
                     profile_text = (profile.text() +
                                     '[[Category:Orphaned request]]')
-                    profile.save(profile_text)
+#                    profile.save(profile_text)
                 profile_talk_text += (u'\n\n' + greeting)
         # once done with all relevant categories, post invitations
-        profile_talk.save(profile_talk_text, summary = 
-                          'Notifying of available mentors')
+#        profile_talk.save(profile_talk_text, summary = 
+#                          'Notifying of available mentors')
 
 ####
 # Debugging and profile talk page clean-up.
