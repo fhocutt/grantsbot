@@ -12,21 +12,17 @@ import mwclient
 import pp
 import flow_mw_settings as mwcreds
 
-if __name__ == '__main__':
-    # Initializing site + logging in
-    site = mwclient.Site(('https', 'test.wikipedia.org'),
-                         clients_useragent=mwcreds.useragent)
-    site.login(mwcreds.username, mwcreds.password)
-    print "You are logged in as %s." % mwcreds.username
 
-    # testing prop=flowinfo on a known Flow-enabled page
+def query1():
+    """Testing prop=flowinfo on a know Flow-enabled page"""
     kwargs = {'action': 'query',
               'titles': 'Wikipedia:Co-op/Mentorship match',
               'prop': 'flowinfo'}
     query1 = site.api(**kwargs)
     pp.pprint(query1)
 
-    # testing posting a new Flow topic through the API
+def query2():
+    """testing posting a new Flow topic through the API"""
     token = site.get_token('csrf')
     cooptitle = 'Wikipedia:Co-op/Mentorship match'
     kwargs2 = {'action': 'flow',
@@ -39,12 +35,15 @@ if __name__ == '__main__':
     query2 = site.api(**kwargs2)
     pp.pprint(query2)
 
+
+def query3():
     # testing site.api(*args) to compare to site.api(**kwargs)
     query3 = site.api(action = 'query',
                       titles = 'Wikipedia:Co-op/Mentorship match',
                       prop = 'flowinfo')
     pp.pprint(query3)
 
+def query4():
     # query to fetch user who made the first revision
     # /w/api.php?action=query&prop=revisions&format=json&rvdir=newer&titles=Wikipedia%3ACo-op%2FPerson2
 
@@ -67,7 +66,9 @@ if __name__ == '__main__':
 
     print user
 
-#   /w/api.php?action=query&list=categorymembers&format=json&cmtitle=Category%3AWants%20to%20edit&cmprop=ids|title|timestamp&cmlimit=max&cmsort=timestamp&cmdir=older&cmend=2014-11-05T01%3A12%3A00Z&indexpageids=
+def query5():
+    """ Data for the following API call: """
+    #   /w/api.php?action=query&list=categorymembers&format=json&cmtitle=Category%3AWants%20to%20edit&cmprop=ids|title|timestamp&cmlimit=max&cmsort=timestamp&cmdir=older&cmend=2014-11-05T01%3A12%3A00Z&indexpageids=
     categoryname = 'Wants to learn to edit'
     timelastchecked = '2014-11-05T01%3A12%3A00Z'
     recentkwargs = {'action': 'query',
@@ -79,3 +80,14 @@ if __name__ == '__main__':
                     'cmdir': 'older',
                     'cmend': timelastchecked,
                     'indexpageids': ''}
+
+
+if __name__ == '__main__':
+    # Initializing site + logging in
+    site = mwclient.Site(('https', 'test.wikipedia.org'),
+                         clients_useragent=mwcreds.useragent)
+    site.login(mwcreds.username, mwcreds.password)
+    print "You are logged in as %s." % mwcreds.username
+
+    query1()
+    query4()
