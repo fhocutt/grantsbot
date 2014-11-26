@@ -27,7 +27,9 @@
 # the corresponding talk page with the name of a possible mentor (one for
 # each learning interest category on the page).
 
-
+import logging
+import logging.handlers
+import sqlalchemy
 import mwclient
 
 # Config file with login information and user-agent string
@@ -39,6 +41,14 @@ import matcherrors
 mentor_cats = ['Teaches research', 'Teaches editing', 'Teaches template writing']
 learner_cats = ['Category:Wants to do research', 'Category:Wants to edit', 'Category:Wants to write templates']
 category_dict = {k:v for (k,v) in zip(learner_cats, mentor_cats)}
+
+
+# constants for run logs:
+run_id = 0 #parameter passed in when the job is run?
+edited_pages = False
+wrote_db = False
+logged_errors = False
+
 
 
 def get_talk_page(page):
@@ -86,6 +96,11 @@ def choosementor(mentors):
     """
     return mentors[0]
 
+def logmatch(learnerID, mentorID, learner_page_id, category, cat_time,
+             match_time, no_match):
+    """Logs match to DB"""
+    pass
+
 
 def buildgreeting(learner, mentor, skill):
     """Puts the string together that can be posted to a talk page or
@@ -98,7 +113,28 @@ def buildgreeting(learner, mentor, skill):
                'to work together!' % {'l': learner, 'm': mentor, 's': skill}
     return greeting
 
+# TODO
+def logerror():
+    """TODO"""
+    
+    pass
+
+# FIXME DRY
+def logrun(run_id, edited_pages, wrote_db, logged_errors):
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
+    message = '\t%s\t%s\t%s\t%s' % (run_id, edited_pages, wrote_db, 
+                                    logged_errors)
+    formatter = logging.Formatter('%(asctime)s %(message)s')
+    handler = logging.handlers.RotatingFileHandler('matchbot.log',
+                                                   maxBytes=100,
+                                                   backupCount=5)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.info(message)
+
 if __name__ == '__main__':
+
     # Initializing site + logging in
     site = mwclient.Site(('https', 'test.wikipedia.org'), 
                          clients_useragent=matchbot_settings.useragent)
@@ -109,7 +145,7 @@ if __name__ == '__main__':
     for profile in site.Categories['Co-op learner']:
         profile_talk = get_talk_page(profile)
         profile_talk_text = u''                  # to replace text
-#       profile_talk_text = profile_talk.text()   # to append text
+#        profile_talk_text = profile_talk.text()   # to append text
 
         # get a list of categories on the learner's page
         categories = profile.categories()
@@ -127,7 +163,7 @@ if __name__ == '__main__':
                     for page in mentors:
                         mentorprofiles.append(page.page_title) 
 
-                if mentorprofiles == []:
+                    if mentorprofiles == []:
                         raise matcherrors.MatchError
 
                     mentor = getusername(choosementor(mentorprofiles))
@@ -146,6 +182,8 @@ if __name__ == '__main__':
         # once done with all relevant categories, post invitations
 #        profile_talk.save(profile_talk_text, summary = 
 #                          'Notifying of available mentors')
+
+    logrun(run_id, edited_pages, wrote_db, logged_errors)
 
 ####
 # Debugging and profile talk page clean-up.
