@@ -13,7 +13,6 @@ class MatchError(Error):
     ''' Exception raised when a match cannot be found    
 
     Attributes:
-        expr -- input expression in which error occurred
         msg -- explanation of the error
 
     '''

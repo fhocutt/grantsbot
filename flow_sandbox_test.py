@@ -87,7 +87,7 @@ if __name__ == '__main__':
     site = mwclient.Site(('https', 'test.wikipedia.org'),
                          clients_useragent=mwcreds.useragent)
     site.login(mwcreds.username, mwcreds.password)
-    print "You are logged in as %s." % mwcreds.username
+    print("You are logged in as %s." % mwcreds.username)
 
     query1()
     query4()

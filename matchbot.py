@@ -44,7 +44,7 @@ category_dict = {k:v for (k,v) in zip(learner_cats, mentor_cats)}
 
 
 # constants for run logs:
-run_id = 0 #parameter passed in when the job is run?
+run_id = 0 #parameter passed in when the job is run? TODO
 edited_pages = False
 wrote_db = False
 logged_errors = False
@@ -83,9 +83,13 @@ def getusername(profile_title):
     """
     if profile_title[:10] == u'Wikipedia:':
         profile_title = profile_title.strip(u'Wikipedia:')
+    else:
+        pass
 
     if profile_title[:6] == u'Co-op/':
         profile_title = profile_title.strip(u'Co-op/')
+    else:
+        pass
 
     return profile_title
 
@@ -133,13 +137,28 @@ def logrun(run_id, edited_pages, wrote_db, logged_errors):
     logger.addHandler(handler)
     logger.info(message)
 
+# FIXME ditto
+def logerror(message):
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.ERROR)
+    formatter = logging.Formatter('%(asctime)s %(message)s')
+    handler = logging.FileHandler('matchbot_errors.log')
+    logger.addHandler(handler)
+    logger.error(message)
+
 if __name__ == '__main__':
-
     # Initializing site + logging in
-    site = mwclient.Site(('https', 'test.wikipedia.org'), 
-                         clients_useragent=matchbot_settings.useragent)
-    site.login(matchbot_settings.username, matchbot_settings.password)
-
+    try:
+        site = mwclient.Site(('https', 'test.wikipedia.org'), 
+                              clients_useragent=matchbot_settings.useragent)
+        site.login(matchbot_settings.username, matchbot_settings.password)
+    except(LoginError):
+        logerror('LoginError: could not log in')
+        logged_errors = True
+    except:
+        logerror('Login failed')
+        logged_errors = True
+        #TODO
 
     # site.Categories['Foo'] is a List(?) of Pages with 'Category:Foo'
     for profile in site.Categories['Co-op learner']:
@@ -156,7 +175,8 @@ if __name__ == '__main__':
                 matchcat = category_dict[cat.name]
 
                 try:
-                    # Make a collection of mentors who marked the matching category
+                    # Make a collection of mentors who marked the matching
+                    # category
                     mentors = site.Categories[matchcat]
                     mentorprofiles = []
 
