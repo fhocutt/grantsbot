@@ -1,6 +1,7 @@
 # configuration files
 grantsbot_settings.*
 matchbot_settings.*
+hostbot_settings.*
 # compiled modules
 *.pyc
 # subdirectories
@@ -13,3 +14,4 @@ test*
 *.DS_Store
 *.InterarchyMirrorCacheData
 *Icon*
+*.log*

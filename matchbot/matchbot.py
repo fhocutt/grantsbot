@@ -35,6 +35,7 @@ import mwclient
 # Config file with login information and user-agent string
 import matchbot_settings
 import matcherrors
+import mbapi
 
 # TODO: works, but there's inconsistency between site.Pages['Category:Blah']
 #        and site.Categories['Blah']; could be confusing. mwclient issue.
@@ -132,7 +133,7 @@ def logrun(run_id, edited_pages, wrote_db, logged_errors):
     formatter = logging.Formatter('%(asctime)s %(message)s')
     handler = logging.handlers.RotatingFileHandler('matchbot.log',
                                                    maxBytes=100,
-                                                   backupCount=5)
+                                                   backupCount=2)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.info(message)
@@ -146,10 +147,13 @@ def logerror(message):
     logger.addHandler(handler)
     logger.error(message)
 
+def logmatch():
+    pass
+
 if __name__ == '__main__':
     # Initializing site + logging in
     try:
-        site = mwclient.Site(('https', 'test.wikipedia.org'), 
+        site = mwclient.Site(('https', 'test.wikipedia.org'),
                               clients_useragent=matchbot_settings.useragent)
         site.login(matchbot_settings.username, matchbot_settings.password)
     except(LoginError):
@@ -202,6 +206,17 @@ if __name__ == '__main__':
         # once done with all relevant categories, post invitations
 #        profile_talk.save(profile_talk_text, summary = 
 #                          'Notifying of available mentors')
+        edited_pages = True
+
+        try:
+            #TODO: write to DB
+            logmatch(luid=, muid=, category=matchcat, cattime=,
+                     matchtime=, notmatched=,
+                     lpageid)
+            wrote_db = True
+        except:
+            logerror('Could not write to DB')
+            logged_errors = True
 
     logrun(run_id, edited_pages, wrote_db, logged_errors)
 
