@@ -21,7 +21,7 @@ def flowenabled(title):
         return (u'enabled' in pagedict[page]['flowinfo']['flow'])
 
 # TODO: put this in place with logic (flow enabled or not), make it return
-def postflow():
+def postflow(page, message):
     """testing posting a new Flow topic through the API"""
     token = site.get_token('csrf')
     cooptitle = 'Wikipedia:Co-op/Mentorship match'
@@ -55,8 +55,7 @@ def userid(title):
     pageid = query['query']['pageids'][0]
     user = pages[pageid]['revisions'][0]['user']
     userid = pages[pageid]['revisions'][0]['userid']
-    timestamp = pages[pageid]['revisions'][0]['timestamp']
-    return (user, userid, timestamp)
+    return (user, userid)
 
 # TODO: put in the call, make it return appropriately
 def newmembers(categoryname, timelastchecked):

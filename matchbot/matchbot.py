@@ -27,6 +27,7 @@
 # the corresponding talk page with the name of a possible mentor (one for
 # each learning interest category on the page).
 
+import datetime
 import logging
 import logging.handlers
 import sqlalchemy
@@ -77,35 +78,15 @@ def findmentors():
     pass
 
 def getusername(profile_title):
-    """Strips the namespace and Co-op page from profile titles (Co-op
-    subpages). Returns the username as a string. If neither
-    'Wikipedia:' nor 'Co-op/' is present at the beginning of the string
-    returns the original string.
-    """
-    if profile_title[:10] == u'Wikipedia:':
-        profile_title = profile_title.strip(u'Wikipedia:')
-    else:
-        pass
 
-    if profile_title[:6] == u'Co-op/':
-        profile_title = profile_title.strip(u'Co-op/')
-    else:
-        pass
-
-    return profile_title
-
+    user, userid = mbapi.userid(profile_title)
+    return (user, userid)
 
 def choosementor(mentors):
     """Given a list of mentor names/profile titles chooses one mentor
     to recommend. Returns the mentor name or profile title as a string.
     """
     return mentors[0]
-
-def logmatch(learnerID, mentorID, learner_page_id, category, cat_time,
-             match_time, no_match):
-    """Logs match to DB"""
-    pass
-
 
 def buildgreeting(learner, mentor, skill):
     """Puts the string together that can be posted to a talk page or
@@ -117,12 +98,6 @@ def buildgreeting(learner, mentor, skill):
                'Leave them a message on their talk page and see if you want '\
                'to work together!' % {'l': learner, 'm': mentor, 's': skill}
     return greeting
-
-# TODO
-def logerror():
-    """TODO"""
-    
-    pass
 
 # FIXME DRY
 def logrun(run_id, edited_pages, wrote_db, logged_errors):
@@ -147,6 +122,7 @@ def logerror(message):
     logger.addHandler(handler)
     logger.error(message)
 
+# TODO
 def logmatch():
     pass
 
@@ -166,7 +142,14 @@ if __name__ == '__main__':
 
     # site.Categories['Foo'] is a List(?) of Pages with 'Category:Foo'
     for profile in site.Categories['Co-op learner']:
+        learner, luid = getusername(profile.name)
+        learner_talk = get_talk_page(site.Pages[learner]) # is this ok? needed?
         profile_talk = get_talk_page(profile)
+
+        #TODO: eventually if flow isn't enabled post to new flow board?
+        if flowenabled(profile_talk.name):
+            pass
+
         profile_talk_text = u''                  # to replace text
 #        profile_talk_text = profile_talk.text()   # to append text
 
@@ -190,8 +173,7 @@ if __name__ == '__main__':
                     if mentorprofiles == []:
                         raise matcherrors.MatchError
 
-                    mentor = getusername(choosementor(mentorprofiles))
-                    learner = getusername(profile.name)
+                    mentor, muid = getusername(choosementor(mentorprofiles))
 
                     greeting = buildgreeting(learner, mentor, matchcat)
 
@@ -203,15 +185,27 @@ if __name__ == '__main__':
                                     '[[Category:Orphaned request]]')
 #                    profile.save(profile_text)
                 profile_talk_text += (u'\n\n' + greeting)
+
+        # posting to the learner's talk page? hang on... TODO
+        # I think that profile_talk is not the correct page? is that true?
+        #TODO: eventually if flow isn't enabled post to new flow board?
+        flowenabled = flowenabled(learner_talk.name)
+        if flowenabled:
+            mbapi.postflow(learner_talk.name, greeting)
+        elif not flowenabled and learner_talk.text() == '':
+            mbapi.newflow(learner_talk.name, greeting)
+        else:
+            pass #FIXME
         # once done with all relevant categories, post invitations
-#        profile_talk.save(profile_talk_text, summary = 
-#                          'Notifying of available mentors')
+    #        profile_talk.save(profile_talk_text, summary = 
+    #                          'Notifying of available mentors')
         edited_pages = True
+        matchtime = datetime.datetime.now()
 
         try:
             #TODO: write to DB
             logmatch(luid=, muid=, category=matchcat, cattime=,
-                     matchtime=, notmatched=,
+                     matchtime=matchtime, notmatched=,
                      lpageid)
             wrote_db = True
         except:
