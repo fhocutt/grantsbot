@@ -56,31 +56,47 @@ logged_errors = False
 
 
 #TODO
-def matchcat(categories, category_dict):
-    pass
+def match():
+    if True:
+        pass
+    else:
+        return None
 
-#TODO
-def findmentors():
-    pass
-
-def choosementor(mentors):
-    """Given a list of mentor names/profile titles chooses one mentor
-    to recommend. Returns the mentor name or profile title as a string.
-    """
-    return mentors[0]
-
-def buildgreeting(learner, mentor, skill):
+def buildgreeting(learner, mentor, skill, nomatch):
     """Puts the string together that can be posted to a talk page or
        Flow board to introduce a potential mentor to a learner.
     """
-    greeting = 'Hello, [[User:%(l)s|%(l)s]]! Thank you for your interest in '\
-               'the Co-op. [[User:%(m)s|%(m)s]] has listed "%(s)s" in their '\
-               'mentorship profile. '\
-               'Leave them a message on their talk page and see if you want '\
-               'to work together!' % {'l': learner, 'm': mentor, 's': skill}
-    return greeting
+    if not nomatch:
+        greeting = 'Hello, [[User:%(l)s|%(l)s]]! Thank you for your interest '\
+                   'in the Co-op. [[User:%(m)s|%(m)s]] has listed "%(s)s" in '\
+                   'their mentorship profile. '\
+                   'Leave them a message on their talk page and see if you '\
+                   'want to work together!' % {'l': learner, 'm': mentor,
+                                               's': skill}
+        topic = 'Welcome to the Co-op! Here is your match.'
+    else:
+        greeting = 'Sorry, we don\'t have a match for you!'
+        topic = 'Welcome to the Co-op!'
+    return (greeting, topic)
+
+def postinvite(pagetitle, greeting, topic, flowenabled):
+    if flowenabled:
+        mbapi.postflow(pagetitle, greeting, topic)
+        return True
+    else:
+        profile = site.Pages[pagetitle]
+        pagetext = profile.text()
+        if pagetext == '':
+            mbapi.newflow(learner_talk.name, greeting, topic)
+            return True
+        else:
+            newtext = pagetext + '\n\n' + greeting
+            profile.save(newtext, summary = topic)
+            return True
+    return False
 
 if __name__ == '__main__':
+    # log (time)-started-running here TODO
     # Initializing site + logging in
     try:
         site = mwclient.Site(('https', 'test.wikipedia.org'),
@@ -92,82 +108,73 @@ if __name__ == '__main__':
     except:
         mblog.logerror('Login failed')
         logged_errors = True
-        #TODO
+        #TODO - sys or os.exit()
 
-    '''Rewriting this to work on a minimum number of pages. Looking for
-    user pages with new categories first, then will match based on those.'''
-
-    users = []
+    learners = []
     # get the new learners for all the categories
     # info to start: profile page id, profile name, time cat added, category
     for category in lcats:
         try:
             # API call with that category
-            newusers = mbapi.newmembert(category, timelastchecked)
-            for userdict in newusers:
+            newlearners = mbapi.newmembers(category, timelastchecked)
+            for userdict in newlearners:
                 # add the results of that call to the list of users?
-                users.append(userdict)
-        except:
+                learners.append(userdict)
+        except (Exception):
             mblog.logerror('Could not fetch newly categorized profiles in %s' % 
                      category)
-
     # add information: username, userid, talk page id
-    for userdict in users:
+    for userdict in learners:
         #figure out who it is
         if userdict['profile'].startswith('Wikipedia:Co-op/'):
             learner, luid, ltalkid = mbapi.userid(userdict[lpgid])
             userdict['learner'] = learner
             userdict['luid'] = luid
             userdict['ltalkid'] = ltalkid
-
         else:
             pass
 
     # find available mentors
     mentors = {}
-    nomorementees = mbapi.getmembers() #nomorementees TODO
-    for category in mcats:
+    nomore = set(mbapi.getallmembers(NOMENTEES)) #nomorementees FIXME
+    for category in mcats: #MCATS: where is it FIXME
         try:
-            # mentors[category] = mbapi.getmembers(category)
-            # remove mentors on that second list from mentors[category] for
-            # all categories
+            catmentors = mbapi.getallmembers(category)
+            # this may be slow...
+            mentors[category] = [x for x in catmentors if x not in nomore]
         except:
             mblog.logerror('Could not fetch list of mentors for %s') % category
 
     for learner in learners:
         # make the matches, logging info
         try:
-            mentor = match(mentors[category]) # FIXME figure out how categories
-                                              # are matched/stored
-            mentor, muid, mtalk = mbapi.userid(choosementor(mentorprofiles))
+            notmatched = True
+            mentor = match(learner[category]) # FIXME figure out category store
             if mentor = None:
-                raise matcherrors.MatchError
-        except(matcherrors.MatchError):
-            # do no-match flow
-            pass
+                raise mberrors.MatchError
+            mname, muid, mtalk = mbapi.userid(mentor)
+            notmatched = False
+        except (mberrors.MatchError):
+            # add '[[Category:No match found]]' to their page
+            profile = site.Pages(learner[profile])
+            newprofiletext = profile.text() + NOMATCH #FIXME
+            profile.save(newprofiletext, NOMATCHSUMMARY) #FIXME
+        except (Exception):
+            mblog.logerror('Matching/default match failed')
+            logged_errors = True
+            break
 
-        # build the message
+        # build the message and post it
         flowenabled = mbapi.flowenabled(talkpage) #FIXME this isn't talkpage
-
-        greeting = buildgreeting(learner, mentor, matchcat) # also consider flw
-
-        # post the message (talk page or profile's talk page? AHHHH profile's?
-        #TODO: eventually if flow isn't enabled post to new flow board?
-
-        # post invitation
-        if flowenabled:
-            mbapi.postflow(learner_talk.name, greeting)
-        elif not flowenabled and learner_talk.text() == '':
-            mbapi.newflow(learner_talk.name, greeting)
-        else:
-            pass #FIXME
-
-    #        profile_talk.save(profile_talk_text, summary = 
-    #                          'Notifying of available mentors')
-        edited_pages = True
-        matchtime = datetime.datetime.now()
-
-
+        greeting, topic = buildgreeting(learner, mentor, matchcat, notmatched)
+        try:
+            postinvite(talkpage, greeting, topic, flowenabled) # return? test?
+            edited_pages = True
+            matchtime = datetime.datetime.now()
+        except (Exception):
+            mblog.logerror('Could not post match on page')
+            logged_errors = True
+            break
 
         # log the match
         try:
@@ -176,27 +183,10 @@ if __name__ == '__main__':
                      matchtime=matchtime, notmatched=,
                      lpageid)
             wrote_db = True
-        except:
+        except (Exception):
             mblog.logerror('Could not write to DB')
             logged_errors = True
+            break
 
-
-    # log the run
+    # log time-finished-running here?
     mblog.logrun(run_id, edited_pages, wrote_db, logged_errors)
-
-
-'''
-                # if no match is found
-                except (matcherrors.MatchError):
-                    greeting = u'Oops, we don\'t have a mentor for you! '\
-                               u'No mentors have listed "%s".' % matchcat
-                    profile_text = (profile.text() +
-                                    '[[Category:Orphaned request]]')
-#                    profile.save(profile_text)
-                profile_talk_text += (u'\n\n' + greeting)
-
-
-####
-# Debugging and profile talk page clean-up.
-#        print profile_talk_text
-#        talk_page.save(talk_page_text, summary = 'clearing out tests')'''
