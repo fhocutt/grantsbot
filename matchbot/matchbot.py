@@ -37,6 +37,7 @@ import mwclient
 import matchbot_settings
 import matcherrors
 import mbapi
+import mblog
 
 # TODO: works, but there's inconsistency between site.Pages['Category:Blah']
 #        and site.Categories['Blah']; could be confusing. mwclient issue.
@@ -52,23 +53,6 @@ wrote_db = False
 logged_errors = False
 
 
-
-def get_talk_page(page):
-    """Given a Page, return a Page for the talk page from the
-    corresponding namespace.
-
-    Assumes that odd values for page.namespace mean that the given Page
-    is already a talk page and passes it back.
-    """
-    if page.namespace % 2 == 0:
-        talk_ns = page.namespace + 1
-    else:
-        return page
-
-    talk_page_title = u'%s:%s' % (page.site.namespaces[talk_ns],
-                                  page.page_title)
-    return site.Pages[talk_page_title]
-
 #TODO
 def matchcat(categories, category_dict):
     pass
@@ -76,11 +60,6 @@ def matchcat(categories, category_dict):
 #TODO
 def findmentors():
     pass
-
-def getusername(profile_title):
-
-    user, userid = mbapi.userid(profile_title)
-    return (user, userid)
 
 def choosementor(mentors):
     """Given a list of mentor names/profile titles chooses one mentor
@@ -99,33 +78,6 @@ def buildgreeting(learner, mentor, skill):
                'to work together!' % {'l': learner, 'm': mentor, 's': skill}
     return greeting
 
-# FIXME DRY
-def logrun(run_id, edited_pages, wrote_db, logged_errors):
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-    message = '\t%s\t%s\t%s\t%s' % (run_id, edited_pages, wrote_db, 
-                                    logged_errors)
-    formatter = logging.Formatter('%(asctime)s %(message)s')
-    handler = logging.handlers.RotatingFileHandler('matchbot.log',
-                                                   maxBytes=100,
-                                                   backupCount=2)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.info(message)
-
-# FIXME ditto
-def logerror(message):
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.ERROR)
-    formatter = logging.Formatter('%(asctime)s %(message)s')
-    handler = logging.FileHandler('matchbot_errors.log')
-    logger.addHandler(handler)
-    logger.error(message)
-
-# TODO
-def logmatch():
-    pass
-
 if __name__ == '__main__':
     # Initializing site + logging in
     try:
@@ -133,50 +85,105 @@ if __name__ == '__main__':
                               clients_useragent=matchbot_settings.useragent)
         site.login(matchbot_settings.username, matchbot_settings.password)
     except(LoginError):
-        logerror('LoginError: could not log in')
+        mblog.logerror('LoginError: could not log in')
         logged_errors = True
     except:
-        logerror('Login failed')
+        mblog.logerror('Login failed')
         logged_errors = True
         #TODO
 
-    # site.Categories['Foo'] is a List(?) of Pages with 'Category:Foo'
-    for profile in site.Categories['Co-op learner']:
-        learner, luid = getusername(profile.name)
-        learner_talk = get_talk_page(site.Pages[learner]) # is this ok? needed?
-        profile_talk = get_talk_page(profile)
+    '''Rewriting this to work on a minimum number of pages. Looking for
+    user pages with new categories first, then will match based on those.'''
 
-        #TODO: eventually if flow isn't enabled post to new flow board?
-        if flowenabled(profile_talk.name):
+    users = []
+    # get the new learners for all the categories
+    # info to start: profile page id, profile name, time cat added, category
+    for category in lcats:
+        try:
+            # API call with that category
+            newusers = mbapi.newmembert(category, timelastchecked)
+            for userdict in newusers:
+                # add the results of that call to the list of users?
+                users.append(userdict)
+        except:
+            mblog.logerror('Could not fetch newly categorized profiles in %s' % 
+                     category)
+
+    # add information: username, userid, talk page id
+    for userdict in users:
+        #figure out who it is
+        if userdict['profile'].startswith('Wikipedia:Co-op/'):
+            learner, luid, ltalkid = mbapi.userid(userdict[lpgid])
+            userdict['learner'] = learner
+            userdict['luid'] = luid
+            userdict['ltalkid'] = ltalkid
+
+        else:
             pass
 
-        profile_talk_text = u''                  # to replace text
-#        profile_talk_text = profile_talk.text()   # to append text
+    # find available mentors
+    mentors = {}
+    nomorementees = mbapi.getmembers() #nomorementees TODO
+    for category in mcats:
+        try:
+            # mentors[category] = mbapi.getmembers(category)
+            # remove mentors on that second list from mentors[category] for
+            # all categories
+        except:
+            mblog.logerror('Could not fetch list of mentors for %s') % category
 
-        # get a list of categories on the learner's page
-        categories = profile.categories()
+    for learner in learners:
+        # make the matches, logging info
+        try:
+            mentor = match(mentors[category]) # FIXME figure out how categories
+                                              # are matched/stored
+            mentor, muid, mtalk = mbapi.userid(choosementor(mentorprofiles))
+            if mentor = None:
+                raise matcherrors.MatchError
+        except(matcherrors.MatchError):
+            # do no-match flow
+            pass
 
-        for cat in categories:
-            # for the ones we can match on...
-            if cat.name in category_dict:
-                matchcat = category_dict[cat.name]
+        # build the message
+        flowenabled = mbapi.flowenabled(talkpage) #FIXME this isn't talkpage
 
-                try:
-                    # Make a collection of mentors who marked the matching
-                    # category
-                    mentors = site.Categories[matchcat]
-                    mentorprofiles = []
+        greeting = buildgreeting(learner, mentor, matchcat) # also consider flw
 
-                    for page in mentors:
-                        mentorprofiles.append(page.page_title) 
+        # post the message (talk page or profile's talk page? AHHHH profile's?
+        #TODO: eventually if flow isn't enabled post to new flow board?
 
-                    if mentorprofiles == []:
-                        raise matcherrors.MatchError
+        # post invitation
+        if flowenabled:
+            mbapi.postflow(learner_talk.name, greeting)
+        elif not flowenabled and learner_talk.text() == '':
+            mbapi.newflow(learner_talk.name, greeting)
+        else:
+            pass #FIXME
 
-                    mentor, muid = getusername(choosementor(mentorprofiles))
+    #        profile_talk.save(profile_talk_text, summary = 
+    #                          'Notifying of available mentors')
+        edited_pages = True
+        matchtime = datetime.datetime.now()
 
-                    greeting = buildgreeting(learner, mentor, matchcat)
 
+
+        # log the match
+        try:
+            #TODO: write to DB
+            mblog.logmatch(luid=, muid=, category=matchcat, cattime=,
+                     matchtime=matchtime, notmatched=,
+                     lpageid)
+            wrote_db = True
+        except:
+            mblog.logerror('Could not write to DB')
+            logged_errors = True
+
+
+    # log the run
+    mblog.logrun(run_id, edited_pages, wrote_db, logged_errors)
+
+
+'''
                 # if no match is found
                 except (matcherrors.MatchError):
                     greeting = u'Oops, we don\'t have a mentor for you! '\
@@ -186,35 +193,8 @@ if __name__ == '__main__':
 #                    profile.save(profile_text)
                 profile_talk_text += (u'\n\n' + greeting)
 
-        # posting to the learner's talk page? hang on... TODO
-        # I think that profile_talk is not the correct page? is that true?
-        #TODO: eventually if flow isn't enabled post to new flow board?
-        flowenabled = flowenabled(learner_talk.name)
-        if flowenabled:
-            mbapi.postflow(learner_talk.name, greeting)
-        elif not flowenabled and learner_talk.text() == '':
-            mbapi.newflow(learner_talk.name, greeting)
-        else:
-            pass #FIXME
-        # once done with all relevant categories, post invitations
-    #        profile_talk.save(profile_talk_text, summary = 
-    #                          'Notifying of available mentors')
-        edited_pages = True
-        matchtime = datetime.datetime.now()
-
-        try:
-            #TODO: write to DB
-            logmatch(luid=, muid=, category=matchcat, cattime=,
-                     matchtime=matchtime, notmatched=,
-                     lpageid)
-            wrote_db = True
-        except:
-            logerror('Could not write to DB')
-            logged_errors = True
-
-    logrun(run_id, edited_pages, wrote_db, logged_errors)
 
 ####
 # Debugging and profile talk page clean-up.
 #        print profile_talk_text
-#        talk_page.save(talk_page_text, summary = 'clearing out tests')
+#        talk_page.save(talk_page_text, summary = 'clearing out tests')'''

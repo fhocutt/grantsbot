@@ -7,7 +7,7 @@
 #
 # GPL v3.
 
-
+import json
 import mwclient
 import flow_mw_settings as mwcreds
 
@@ -25,14 +25,14 @@ def postflow(page, message):
     """testing posting a new Flow topic through the API"""
     token = site.get_token('csrf')
     cooptitle = 'Wikipedia:Co-op/Mentorship match'
-    kwargs2 = {'action': 'flow',
+    kwargs = {'action': 'flow',
                'page': cooptitle,
                'submodule': 'new-topic',
                'ntcontent': 'MatchBot test',
                'token': token,
                'nttopic': 'MatchBot\'s newer topic',
-               'ntcontent': 'This is some more new content.'}
-    query2 = site.api(**kwargs2)
+               'ntcontent': message}
+    query2 = site.api(**kwargs)
     print(query2)
 
 def userid(title):
@@ -50,9 +50,9 @@ def userid(title):
                      titles = title,
                      rvlimit = 1,
                      indexpageids = "")
-
-    pages = query['query']['pages']
-    pageid = query['query']['pageids'][0]
+    result = json.loads(query)
+    pages = result['query']['pages']
+    pageid = result['query']['pageids'][0]
     user = pages[pageid]['revisions'][0]['user']
     userid = pages[pageid]['revisions'][0]['userid']
     return (user, userid)
@@ -72,7 +72,15 @@ def newmembers(categoryname, timelastchecked):
                     'cmdir': 'older',
                     'cmend': timelastchecked,
                     'indexpageids': ''}
-
+    query = site.api(**recentkwargs)
+    result = json.loads(query)
+    catusers = []
+    for page in result['query']['categorymembers']:
+        userdict = {'lpgid': page['pageid'],
+                    'cattime': page['timestamp'],
+                    'category': categoryname}
+        catusers.append(userdict)
+    return result
 
 if __name__ == '__main__':
     # Initializing site + logging in
