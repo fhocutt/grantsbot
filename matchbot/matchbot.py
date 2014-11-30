@@ -27,15 +27,17 @@
 # the corresponding talk page with the name of a possible mentor (one for
 # each learning interest category on the page).
 
+import random
 import datetime
 import logging
 import logging.handlers
+
 import sqlalchemy
 import mwclient
 
 # Config file with login information and user-agent string
 import matchbot_settings
-import matcherrors
+import mberrors
 import mbapi
 import mblog
 

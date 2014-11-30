@@ -21,41 +21,42 @@ def flowenabled(title):
         return (u'enabled' in pagedict[page]['flowinfo']['flow'])
 
 # TODO: put this in place with logic (flow enabled or not), make it return
-def postflow(page, message):
+def postflow(page, topic, message):
     """testing posting a new Flow topic through the API"""
     token = site.get_token('csrf')
     cooptitle = 'Wikipedia:Co-op/Mentorship match'
     kwargs = {'action': 'flow',
-               'page': cooptitle,
-               'submodule': 'new-topic',
-               'ntcontent': 'MatchBot test',
-               'token': token,
-               'nttopic': 'MatchBot\'s newer topic',
-               'ntcontent': message}
+              'page': cooptitle,
+              'submodule': 'new-topic',
+              'ntcontent': 'MatchBot test',
+              'token': token,
+              'nttopic': topic,
+              'ntcontent': message}
     query2 = site.api(**kwargs)
-    print(query2)
+    return True
 
 def userid(title):
     """ Returns the user who made the first edit to a page.
 
-    Given a string with the page title, returns (user, userid, timestamp)
+    Given a string with the page title, returns (user, userid)
 
     # /w/api.php?action=query&prop=revisions&format=json&rvdir=newer&titles=Wikipedia%3ACo-op%2FPerson2
     """
-
     query = site.api(action = 'query',
-                     prop = 'revisions',
-                     rvprop = 'user|userid|timestamp',
+                     prop = 'revisions|info',
+                     inprop = 'talkid',
+                     rvprop = 'user|userid',
                      rvdir = 'newer',
                      titles = title,
                      rvlimit = 1,
                      indexpageids = "")
     result = json.loads(query)
-    pages = result['query']['pages']
-    pageid = result['query']['pageids'][0]
-    user = pages[pageid]['revisions'][0]['user']
-    userid = pages[pageid]['revisions'][0]['userid']
-    return (user, userid)
+    pagedict = result['query']['pages']
+    for page in pagedict:
+        user = page['revisions'][0]['user']
+        userid = page['revisions'][0]['userid']
+        talkid = page['talkid']
+    return (user, userid, talkid)
 
 # TODO: put in the call, make it return appropriately
 def newmembers(categoryname, timelastchecked):
@@ -76,11 +77,16 @@ def newmembers(categoryname, timelastchecked):
     result = json.loads(query)
     catusers = []
     for page in result['query']['categorymembers']:
-        userdict = {'lpgid': page['pageid'],
+        userdict = {'lprofileid': page['pageid'],
+                    'profile': page['title'],
                     'cattime': page['timestamp'],
                     'category': categoryname}
         catusers.append(userdict)
-    return result
+    return catusers
+
+#TODO
+def getmembers(category):
+    pass
 
 if __name__ == '__main__':
     # Initializing site + logging in
