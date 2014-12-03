@@ -31,6 +31,7 @@ import random
 import datetime
 import logging
 import logging.handlers
+import ConfigParser
 
 import sqlalchemy
 import mwclient
@@ -56,17 +57,21 @@ logged_errors = False
 
 
 #TODO
-def match():
-    if True:
-        pass
+def match(catmentors, genmentors):
+    if catmentors:
+        mentor = random.choice(catmentors)
+        return mentor
+    elif genmentors:
+        mentor = random.choice(genmentors)
+        return mentor
     else:
         return None
 
-def buildgreeting(learner, mentor, skill, nomatch):
+def buildgreeting(learner, mentor, skill, matchmade):
     """Puts the string together that can be posted to a talk page or
        Flow board to introduce a potential mentor to a learner.
     """
-    if not nomatch:
+    if matchmade:
         greeting = 'Hello, [[User:%(l)s|%(l)s]]! Thank you for your interest '\
                    'in the Co-op. [[User:%(m)s|%(m)s]] has listed "%(s)s" in '\
                    'their mentorship profile. '\
@@ -97,6 +102,8 @@ def postinvite(pagetitle, greeting, topic, flowenabled):
 
 if __name__ == '__main__':
     # log (time)-started-running here TODO
+    with open('time.log', 'wb') as timelog:
+        timelog.write(str(datetime.datetime.now()))
     # Initializing site + logging in
     try:
         site = mwclient.Site(('https', 'test.wikipedia.org'),
@@ -105,7 +112,7 @@ if __name__ == '__main__':
     except(LoginError):
         mblog.logerror('LoginError: could not log in')
         logged_errors = True
-    except:
+    except(Exception):
         mblog.logerror('Login failed')
         logged_errors = True
         #TODO - sys or os.exit()
@@ -123,6 +130,7 @@ if __name__ == '__main__':
         except (Exception):
             mblog.logerror('Could not fetch newly categorized profiles in %s' % 
                      category)
+            logged_errors = True
     # add information: username, userid, talk page id
     for userdict in learners:
         #figure out who it is
@@ -140,9 +148,9 @@ if __name__ == '__main__':
     for category in mcats: #MCATS: where is it FIXME
         try:
             catmentors = mbapi.getallmembers(category)
-            # this may be slow...
+            # this may be slowish...
             mentors[category] = [x for x in catmentors if x not in nomore]
-        except:
+        except(Exception):
             mblog.logerror('Could not fetch list of mentors for %s') % category
 
     for learner in learners:

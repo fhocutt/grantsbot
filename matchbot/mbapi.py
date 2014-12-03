@@ -77,7 +77,7 @@ def newmembers(categoryname, timelastchecked):
     result = json.loads(query)
     catusers = []
     for page in result['query']['categorymembers']:
-        userdict = {'lprofileid': page['pageid'],
+        userdict = {'profileid': page['pageid'],
                     'profile': page['title'],
                     'cattime': page['timestamp'],
                     'category': categoryname}
@@ -85,8 +85,18 @@ def newmembers(categoryname, timelastchecked):
     return catusers
 
 #TODO
-def getmembers(category):
-    pass
+def getallmembers(category):
+    kwargs = {'action': 'query',
+              'list': 'categorymembers',
+              'cmtitle': category,
+              'cmprop': 'ids|title'}
+    query = site.api(**kwargs)
+    result = json.loads(query)
+    catmembers = []
+    for page in result['query']['categorymembers']:
+        userdict = {'profileid': page['pageid'], profile: page['title']}
+        catmembers.append(userdict)
+    return catmembers
 
 if __name__ == '__main__':
     # Initializing site + logging in
