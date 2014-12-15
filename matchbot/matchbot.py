@@ -1,5 +1,3 @@
-#!usr/lib/python2.7
-#
 # MatchBot is MediaWiki bot that finds and notifies entities of matches
 # based on categories on profile pages. It will be incorporated into the en.wp
 # Co-op program and should be able to be extended to match people with projects
@@ -32,6 +30,7 @@ import datetime
 import logging
 import logging.handlers
 import ConfigParser
+import sys
 
 import sqlalchemy
 import mwclient
@@ -42,22 +41,31 @@ import mberrors
 import mbapi
 import mblog
 
-# TODO: works, but there's inconsistency between site.Pages['Category:Blah']
-#        and site.Categories['Blah']; could be confusing. mwclient issue.
-mentor_cats = ['Teaches research', 'Teaches editing', 'Teaches template writing']
-learner_cats = ['Category:Wants to do research', 'Category:Wants to edit', 'Category:Wants to write templates']
-category_dict = {k:v for (k,v) in zip(learner_cats, mentor_cats)}
+
+# TODO: Consider whether these should be kept here or in a config file
+mcats = ['Category:Co-op/Mentors/Communication',
+               'Category:Co-op/Mentors/Writing',
+               'Category:Co-op/Mentors/Other']
+CATCHALL = 'Category:Co-op/Mentors/General'
+NOMENTEES = 'Category:Co-op/Inactive mentors'
+lcats = ['Category:Co-op/Requests/Communication',
+                'Category:Co-op/Requests/Writing',
+                'Category:Co-op/Requests/Other']
+category_dict = {k:v for (k,v) in zip(lcats, mcats)}
 
 
 # constants for run logs:
-run_id = 0 #parameter passed in when the job is run? TODO
+run_id = 0 # or sys.argv[1], depending on cron setup TODO
 edited_pages = False
 wrote_db = False
 logged_errors = False
 
 
-#TODO
 def match(catmentors, genmentors):
+    """ Given two lists, returns a random choice from the first, or if there
+    are no elements in the first returns a random choice for the second.
+    If there are no elements in either return None.
+    """
     if catmentors:
         mentor = random.choice(catmentors)
         return mentor
@@ -84,101 +92,121 @@ def buildgreeting(learner, mentor, skill, matchmade):
         topic = 'Welcome to the Co-op!'
     return (greeting, topic)
 
+# FIXME handle namespace errors?
+def gettalkpage(profile):
+    talkpage = 'Wikipedia talk:' + profile.lstrip('Wikipedia:')
+    return talkpage
+
 def postinvite(pagetitle, greeting, topic, flowenabled):
+    """ Given a page, posts a greeting. If Flow is enabled or the page
+        does not already exist, posts as a new topic on a the page's
+        Flow board; otherwise, appends the greeting to the page's existing
+        text.
+    """
     if flowenabled:
-        mbapi.postflow(pagetitle, greeting, topic)
+        mbapi.postflow(pagetitle, topic, greeting, site)
         return True
     else:
         profile = site.Pages[pagetitle]
-        pagetext = profile.text()
-        if pagetext == '':
-            mbapi.newflow(learner_talk.name, greeting, topic)
-            return True
-        else:
-            newtext = pagetext + '\n\n' + greeting
-            profile.save(newtext, summary = topic)
-            return True
+#        if flowenabled == None:
+#            mbapi.postflow(pagetitle, greeting, topic)
+#            return True
+#        else:
+        newtext = profile.text() + '\n\n' + greeting
+        profile.save(newtext, summary=topic)
+        return True
     return False
 
 if __name__ == '__main__':
     # log (time)-started-running here TODO
     with open('time.log', 'wb') as timelog:
-        timelog.write(str(datetime.datetime.now()))
+        timelog.write(datetime.datetime.now())
     # Initializing site + logging in
     try:
         site = mwclient.Site(('https', 'test.wikipedia.org'),
                               clients_useragent=matchbot_settings.useragent)
         site.login(matchbot_settings.username, matchbot_settings.password)
-    except(LoginError):
+        mblog.logdebug('logged in as ' + matchbot_settings.username)
+    except(mwclient.LoginError):
         mblog.logerror('LoginError: could not log in')
         logged_errors = True
     except(Exception):
-        mblog.logerror('Login failed')
+        mblog.logerror('Login failed') # FIXME more verbose error plz
         logged_errors = True
-        #TODO - sys or os.exit()
+        sys.exit()
 
     learners = []
     # get the new learners for all the categories
     # info to start: profile page id, profile name, time cat added, category
     for category in lcats:
         try:
-            # API call with that category
-            newlearners = mbapi.newmembers(category, timelastchecked)
+            newlearners = mbapi.newmembers(category, site) #FIXME this should have time
             for userdict in newlearners:
                 # add the results of that call to the list of users?
-                learners.append(userdict)
+                if userdict['profile'].startswith('Wikipedia:Co-op/'):
+                    learners.append(userdict)
+                else:
+                    pass
         except (Exception):
             mblog.logerror('Could not fetch newly categorized profiles in %s' % 
                      category)
             logged_errors = True
+
     # add information: username, userid, talk page id
     for userdict in learners:
         #figure out who it is
-        if userdict['profile'].startswith('Wikipedia:Co-op/'):
-            learner, luid, ltalkid = mbapi.userid(userdict[lpgid])
-            userdict['learner'] = learner
-            userdict['luid'] = luid
-            userdict['ltalkid'] = ltalkid
-        else:
-            pass
+        learner, luid = mbapi.userid(userdict['profile'], site)
+        userdict['learner'] = learner
+        userdict['luid'] = luid
 
     # find available mentors
     mentors = {}
-    nomore = set(mbapi.getallmembers(NOMENTEES)) #nomorementees FIXME
-    for category in mcats: #MCATS: where is it FIXME
-        try:
-            catmentors = mbapi.getallmembers(category)
-            # this may be slowish...
-            mentors[category] = [x for x in catmentors if x not in nomore]
-        except(Exception):
-            mblog.logerror('Could not fetch list of mentors for %s') % category
+    nomore = mbapi.getallmembers(NOMENTEES, site)
+    allgenmentors = mbapi.getallmembers(CATCHALL, site)
+    genmentors = [x for x in allgenmentors if x not in nomore and x['profile'].startswith('Wikipedia:Co-op/')]
+    for category in mcats:
+#        try:
+        catmentors = mbapi.getallmembers(category, site)
+        mentors[category] = [x for x in catmentors if x not in nomore]
+#        except(Exception):
+ #           mblog.logerror('Could not fetch list of mentors for %s') % category
+
+# end up with a dict of lists of mentors, categories as keys.
 
     for learner in learners:
         # make the matches, logging info
-        try:
-            notmatched = True
-            mentor = match(learner[category]) # FIXME figure out category store
-            if mentor = None:
-                raise mberrors.MatchError
-            mname, muid, mtalk = mbapi.userid(mentor)
-            notmatched = False
-        except (mberrors.MatchError):
+        mcat = category_dict[learner['category']]
+#        try:
+        matchmade = False
+        catments = mentors[mcat]
+        mentor = match(catments, genmentors) # FIXME figure out category store
+        if mentor == None:
+            raise mberrors.MatchError
+        mname, muid = mbapi.userid(mentor['profile'], site)
+        matchmade = True
+#        except (mberrors.MatchError):
             # add '[[Category:No match found]]' to their page
-            profile = site.Pages(learner[profile])
-            newprofiletext = profile.text() + NOMATCH #FIXME
-            profile.save(newprofiletext, NOMATCHSUMMARY) #FIXME
-        except (Exception):
-            mblog.logerror('Matching/default match failed')
-            logged_errors = True
-            break
+#            matchmade = False
+#        except (Exception):
+#            mblog.logerror('Matching/default match failed')
+#            logged_errors = True
+#            continue
 
-        # build the message and post it
-        flowenabled = mbapi.flowenabled(talkpage) #FIXME this isn't talkpage
-        greeting, topic = buildgreeting(learner, mentor, matchcat, notmatched)
-        try:
-            postinvite(talkpage, greeting, topic, flowenabled) # return? test?
-            edited_pages = True
-            matchtime = datetime.datetime.now()
+        talkpage = get_talkpage(learner['profile'])
+        flowenabled = mbapi.flowenabled(talkpage, site)
+        basecat = learner['category'].lstrip('Category:Co-op/Requests/') #FIXME 
+            # (basecat: there's something weird with "Communication", test this)
+        greeting, topic = buildgreeting(learner['learner'], mname,
+                                        basecat, matchmade)
+
+#        try:
+        postinvite(talkpage, greeting, topic, flowenabled) # return? test? TODO
+        edited_pages = True
+        matchtime = datetime.datetime.now() # FIXME; check for api response
+                                            # (does mwclient save that?)
+
+#TODO: logging, DB
+"""
         except (Exception):
             mblog.logerror('Could not post match on page')
             logged_errors = True
@@ -187,9 +215,9 @@ if __name__ == '__main__':
         # log the match
         try:
             #TODO: write to DB
-            mblog.logmatch(luid=, muid=, category=matchcat, cattime=,
-                     matchtime=matchtime, notmatched=,
-                     lpageid)
+#            mblog.logmatch(luid=, muid=, category=matchcat, cattime=,
+#                     matchtime=matchtime, notmatched=,
+#                     lpageid)
             wrote_db = True
         except (Exception):
             mblog.logerror('Could not write to DB')
@@ -197,4 +225,4 @@ if __name__ == '__main__':
             break
 
     # log time-finished-running here?
-    mblog.logrun(run_id, edited_pages, wrote_db, logged_errors)
+    mblog.logrun(run_id, edited_pages, wrote_db, logged_errors)"""

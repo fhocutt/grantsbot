@@ -1,3 +1,5 @@
+import logging
+
 # FIXME DRY
 def logrun(run_id, edited_pages, wrote_db, logged_errors):
     logger = logging.getLogger(__name__)
@@ -25,3 +27,10 @@ def logerror(message):
 def logmatch():
     pass
 
+def logdebug(message):
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    formatter = logging.Formatter('%(asctime)s %(message)s')
+    handler = logging.FileHandler('matchbot_debug.log')
+    logger.addHandler(handler)
+    logger.debug(message)
