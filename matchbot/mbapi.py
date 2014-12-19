@@ -96,6 +96,26 @@ def getallmembers(category, site):
         catmembers.append(userdict)
     return catmembers
 
+
+
+def savepage(page, addedtext, topic):
+    """ uses Page.save() to save page, gets timestamp and new revid.
+    format:
+    {u'contentmodel': u'wikitext',
+     u'newrevid': 219714,
+     u'newtimestamp': u'2014-12-14T05:32:09Z',
+     u'oldrevid': 218886,
+     u'pageid': 68971,
+     u'result': u'Success',
+     u'title': u'Sandbox'}
+    """
+    newtext = page.text() + addedtext
+    result = page.save(newtext, summary=topic)
+    #TODO: if something weird happens here, or if there's nothing added, as {u'nochange': u'', u'contentmodel': u'wikitext', u'pageid': 68971, u'result': u'Success', u'title': u'Sandbox'}
+    revtimestamp = result['newtimestamp']
+    newrevid = result['newrevid']
+    return (newrevid, revtimestamp)
+
 if __name__ == '__main__':
     # Initializing site + logging in
     site = mwclient.Site(('https', 'test.wikipedia.org'),
