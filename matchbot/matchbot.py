@@ -60,6 +60,10 @@ edited_pages = False
 wrote_db = False
 logged_errors = False
 
+def parse_timestamp(t):
+    if t == '0000-00-00T00:00:00Z':
+        return None
+    return datetime.datetime.strptime(t, '%Y-%m-%dT%H:%M:%SZ')
 
 def match(catmentors, genmentors):
     """ Given two lists, returns a random choice from the first, or if there
@@ -104,8 +108,9 @@ def postinvite(pagetitle, greeting, topic, flowenabled):
         text.
     """
     if flowenabled:
-        mbapi.postflow(pagetitle, topic, greeting, site)
-        return True
+        # TODO: result format is in flux right now, may return metadata later
+        result = mbapi.postflow(pagetitle, topic, greeting, site)
+        return result
     else:
         profile = site.Pages[pagetitle]
 #        if flowenabled == None:
@@ -113,14 +118,32 @@ def postinvite(pagetitle, greeting, topic, flowenabled):
 #            return True
 #        else:
         newtext = profile.text() + '\n\n' + greeting
-        profile.save(newtext, summary=topic)
-        return True
+        result = profile.save(newtext, summary=topic)
+        return result
     return False
 
+def getrevid(result, isflow):
+    if isflow:
+        return result['flow']['new-topic']['committed']['topiclist']['post-revision-id']
+    else:
+        return result['newrevid']
+
+# TODO Flow is changing
+def gettimeposted(result, isflow):
+    if isflow:
+        return datetime.datetime.now() #FIXME
+    else:
+        return result['newtimestamp']
+
 if __name__ == '__main__':
-    # log (time)-started-running here TODO
-    with open('time.log', 'wb') as timelog:
-        timelog.write(datetime.datetime.now())
+    # get last time run and log time-started-running
+    with open('time.log', 'r+b') as timelog:
+        prevruntimestamp = timelog.read()
+        timelog.seek(0)
+        timelog.write(datetime.datetime.strftime(datetime.datetime.now(),
+                                                 '%Y-%m-%dT%H:%M:%SZ'))
+        timelog.truncate()
+
     # Initializing site + logging in
     try:
         site = mwclient.Site(('https', 'test.wikipedia.org'),
@@ -140,7 +163,7 @@ if __name__ == '__main__':
     # info to start: profile page id, profile name, time cat added, category
     for category in lcats:
         try:
-            newlearners = mbapi.newmembers(category, site) #FIXME this should have time
+            newlearners = mbapi.newmembers(category, site, prevruntimestamp) #FIXME this should have time
             for userdict in newlearners:
                 # add the results of that call to the list of users?
                 if userdict['profile'].startswith('Wikipedia:Co-op/'):
@@ -192,7 +215,7 @@ if __name__ == '__main__':
 #            logged_errors = True
 #            continue
 
-        talkpage = get_talkpage(learner['profile'])
+        talkpage = gettalkpage(learner['profile'])
         flowenabled = mbapi.flowenabled(talkpage, site)
         basecat = learner['category'].lstrip('Category:Co-op/Requests/') #FIXME 
             # (basecat: there's something weird with "Communication", test this)
@@ -200,29 +223,27 @@ if __name__ == '__main__':
                                         basecat, matchmade)
 
 #        try:
-        postinvite(talkpage, greeting, topic, flowenabled) # return? test? TODO
+        response = postinvite(talkpage, greeting, topic, flowenabled) # return? test? TODO
         edited_pages = True
-        matchtime = datetime.datetime.now() # FIXME; check for api response
-                                            # (does mwclient save that?)
+        revid = getrevid(response, flowenabled)
+        postid = None
+        matchtime = parse_timestamp(gettimeposted(response, flowenabled))
 
-#TODO: logging, DB
-"""
-        except (Exception):
-            mblog.logerror('Could not post match on page')
-            logged_errors = True
-            break
+#        except (Exception):
+#            mblog.logerror('Could not post match on page')
+#            logged_errors = True
+#            break
 
-        # log the match
-        try:
-            #TODO: write to DB
-#            mblog.logmatch(luid=, muid=, category=matchcat, cattime=,
-#                     matchtime=matchtime, notmatched=,
-#                     lpageid)
-            wrote_db = True
-        except (Exception):
-            mblog.logerror('Could not write to DB')
-            logged_errors = True
-            break
+#        try:
+        cataddtime = parse_timestamp(learner['cattime'])
+        mblog.logmatch(luid=luid, lprofile=learner['profile'], muid=muid,
+                           category=basecat, cataddtime=cataddtime,
+                           matchtime=matchtime, matchmade=matchmade,
+                           revid=revid, postid=postid, runid=run_id)
+        wrote_db = True
+#        except (Exception):
+#            mblog.logerror('Could not write to DB')
+#            logged_errors = True
+#            break
 
-    # log time-finished-running here?
-    mblog.logrun(run_id, edited_pages, wrote_db, logged_errors)"""
+    mblog.logrun(run_id, edited_pages, wrote_db, logged_errors)

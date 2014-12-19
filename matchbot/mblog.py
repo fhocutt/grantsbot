@@ -1,4 +1,5 @@
 import logging
+import sqlalchemy as sqa
 
 # FIXME DRY
 def logrun(run_id, edited_pages, wrote_db, logged_errors):
@@ -24,8 +25,20 @@ def logerror(message):
     logger.error(message)
 
 # TODO
-def logmatch():
-    pass
+def logmatch(luid, lprofile, category, muid, matchtime,
+                  cataddtime, matchmade, runid, revid=None, postid=None):
+    engine = sqa.create_engine('sqlite:///matches.db', echo=True)
+    metadata = sqa.MetaData()
+    matches = sqa.Table('matches', metadata, autoload=True,
+                        autoload_with=engine)
+    ins = matches.insert()
+    conn = engine.connect()
+    conn.execute(ins, {'luid': luid, 'lprofile': lprofile,
+                       'category': category, 'muid': muid,
+                       'matchtime':matchtime, 'cataddtime': cataddtime,
+                       'revid': revid, 'postid': postid,
+                       'matchmade': matchmade, 'runid': runid})
+    return True
 
 def logdebug(message):
     logger = logging.getLogger(__name__)

@@ -35,9 +35,10 @@ def postflow(page, topic, message, site):
               'submodule': 'new-topic',
               'token': token,
               'nttopic': topic,
-              'ntcontent': message}
+              'ntcontent': message,
+              'ntmetadataonly': 'true'}
     query2 = site.api(**kwargs)
-    return True
+    return query2
 
 def userid(title, site):
     """ Returns the user who made the first edit to a page.
@@ -60,12 +61,9 @@ def userid(title, site):
     return (user, userid)
 
 # TODO: put in the call, make it return appropriately
-def newmembers(categoryname, site, timelastchecked='2014-11-05T01%3A12%3A00Z'):
+def newmembers(categoryname, site, timelastchecked):
     """ Data for the following API call: """
     #   /w/api.php?action=query&list=categorymembers&format=json&cmtitle=Category%3AWants%20to%20edit&cmprop=ids|title|timestamp&cmlimit=max&cmsort=timestamp&cmdir=older&cmend=2014-11-05T01%3A12%3A00Z&indexpageids=
-#    categoryname = 'Wants to learn to edit'
-    t = '2014-11-05T01:12:00Z'
-    timelastchecked = time.strptime(t, '%Y-%m-%dT%H:%M:%SZ') #DEBUG FIXME don't use this
     recentkwargs = {'action': 'query',
                     'list': 'categorymembers',
                     'cmtitle': categoryname,
@@ -73,8 +71,7 @@ def newmembers(categoryname, site, timelastchecked='2014-11-05T01%3A12%3A00Z'):
                     'cmlimit': 'max',
                     'cmsort': 'timestamp',
                     'cmdir': 'older',
-                    'cmend': timelastchecked,
-                    'indexpageids': ''}
+                    'cmend': timelastchecked}
     result = site.api(**recentkwargs)
     catusers = []
     for page in result['query']['categorymembers']:
@@ -90,7 +87,8 @@ def getallmembers(category, site):
     kwargs = {'action': 'query',
               'list': 'categorymembers',
               'cmtitle': category,
-              'cmprop': 'ids|title'}
+              'cmprop': 'ids|title',
+              'cmlimit': 'max'}
     query = site.api(**kwargs)
     catmembers = []
     for page in query['query']['categorymembers']:
