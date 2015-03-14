@@ -1,5 +1,7 @@
 # configuration files
+*config.json
 grantsbot_settings.*
+*cnf*
 # compiled modules
 *.pyc
 # subdirectories
@@ -7,8 +9,10 @@ data/
 logs/
 modules/
 old_scripts/
-test*
+*/log/
 # crud
 *.DS_Store
 *.InterarchyMirrorCacheData
 *Icon*
+*.swp
+*time.log
