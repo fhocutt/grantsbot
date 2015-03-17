@@ -70,7 +70,7 @@ def getSubDate(day_interval):
     Returns the date a specified number of days before the current date
     as an API and database-friendly 14-digit timestamp string.
     """
-    today = datetime.utcnow()
+    today = utcnow()
     sd_datetime = today - relativedelta(days=day_interval)
     sd_datetime = utcnow().replace(tzinfo=dateutil.tz.tzutc())-timedelta(days=day_interval)
     sd_string = sd_datetime.strftime('%Y%m%d%H%M%S')

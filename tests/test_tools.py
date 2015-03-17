@@ -1,10 +1,13 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+""" Automated tests for tools.py. """
+
+
 import datetime
 import dateutil
-from nose.tools import *
 
+from nose.tools import *
 import mock
 
 from grantsbot import tools

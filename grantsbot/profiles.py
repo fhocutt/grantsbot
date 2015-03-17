@@ -16,18 +16,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # from wikitools import category as wtcat
-from datetime import datetime, timedelta
-import dateutil.parser
-from dateutil.relativedelta import relativedelta
 import wikitools
+
 import grantsbot_settings
-import MySQLdb
-import output_settings
 import templates
-import operator
-import queries
 import re
-import time
 
 class Profiles:
 	"""Operations you might want to perform on and with profiles."""
