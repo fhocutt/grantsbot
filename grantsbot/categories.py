@@ -15,72 +15,78 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import wikitools
+import mwclient
 import grantsbot_settings
+import profiles
 
 class Categories:
-	"""A category on a wiki."""
+    """A category on a wiki."""
 
-	def __init__(self, title, namespace = False, cmtype = "page", action = False): #should be more agnostic about namespace param
-		"""
-		Instantiate basic variables for the category you're interested in.
-		"""
-		self.cat_title = "Category:" + title
-		self.supercat = "Category:IdeaLab/Ideas/Active"
-		self.mem_type = cmtype
-		if action:
-			self.action = action
-# 		print self.type
-		if namespace:
-			self.mem_namespace = namespace
-		else:
-			self.mem_namespace = ""
-		self.wiki = wikitools.Wiki(grantsbot_settings.apiurl)
-		self.wiki.login(grantsbot_settings.username, grantsbot_settings.password)
+    def __init__(self, title, namespace=False, cmtype="page", action=False): #should be more agnostic about namespace param
+        """
+        Instantiate basic variables for the category you're interested in.
+        """
+        self.cat_title = "Category:" + title
+        self.supercat = "Category:IdeaLab/Ideas/Active"
+        self.mem_type = cmtype
 
-	def getCatMembers(self):
-		"""
-		Get the members of the specified category and their metadata.
-		Example: http://meta.wikimedia.org/w/api.php?action=query&list=categorymembers&cmtype=page&cmtitle=Category:IEG/Proposals/IdeaLab&cmnamespace=200&cmprop=title|timestamp|ids&cmsort=timestamp&cmdir=desc&format=jsonfm
-		...will return a dict like 
-		{'page id' : someid, 'page path' : 'somepath', 'datetime added' : 'sometimestamp'}
-		"""
-		if self.mem_type == 'page':
-			query_params = {
-			'action': 'query',
-			'list': 'categorymembers',
-			'cmtitle' : self.cat_title,
-			'cmtype': self.mem_type,
-			'cmnamespace' : self.mem_namespace,
-			'cmprop' : 'title|timestamp|ids',
-			'cmsort' : 'timestamp',
-			'cmdir' : 'desc'
-			}
-			req = wikitools.APIRequest(self.wiki, query_params)
-			response = req.query()
-			mem_list = [{'page id' : str(x['pageid']), 'page path' : x['title'], 'timestamp' : x['timestamp']} for x in response['query']['categorymembers']]
-			for mem in mem_list:
-				mem = self.getPageMetaData(mem)
-			return mem_list
-		else:
-			print "not set up to get " + self.mem_type + " category members yet"
+        if action:
+            self.action = action
+        else:
+            pass
 
-	def getPageMetaData(self, mempage): #Need to make this a call to profiles.py.
-		"""
-		Gets some additional metadata about each page.
-		Currently just the local talkpage id or subjectid and the full url.
-		"""
-		params = {
-			'action': 'query',
-			'titles': mempage['page path'],
-			'prop': 'info',
-			'inprop' : 'talkid|subjectid|url'
-		}
-		req = wikitools.APIRequest(self.wiki, params)
-		response = req.query()
-		pageid = str(mempage['page id'])
-		try:
-			mempage['talkpage id'] = str(response['query']['pages'][pageid]['talkid'])
-		except KeyError:
-			mempage['talkpage id'] = "" #probably not necessary anymore, if I add these default params in to every one anyway.
-		return mempage
+        if namespace:
+            self.mem_namespace = namespace
+        else:
+            self.mem_namespace = ""
+
+        self.site = mwclient.Site((grantsbot_settings.protocol,
+                                   grantsbot_settings.site))
+        self.site.login(grantsbot_settings.username,
+                        grantsbot_settings.password)
+
+    def getCatMembers(self):
+        """
+        Get the members of the specified category and their metadata.
+        Example: http://meta.wikimedia.org/w/api.php?action=query&list=categorymembers&cmtype=page&cmtitle=Category:IEG/Proposals/IdeaLab&cmnamespace=200&cmprop=title|timestamp|ids&cmsort=timestamp&cmdir=desc&format=jsonfm
+        ...will return a dict like
+        {'page id' : someid, 'page path' : 'somepath', 'datetime added' : 'sometimestamp'}
+        """
+        if self.mem_type == 'page':
+            query_params = {
+            'action': 'query',
+            'list': 'categorymembers',
+            'cmtitle' : self.cat_title,
+            'cmtype': self.mem_type,
+            'cmnamespace' : self.mem_namespace,
+            'cmprop' : 'title|timestamp|ids',
+            'cmsort' : 'timestamp',
+            'cmdir' : 'desc'
+            }
+            response = self.site.api(**query_params)
+
+            mem_list = [{'page id' : str(x['pageid']), 'page path' : x['title'], 'timestamp' : x['timestamp']} for x in response['query']['categorymembers']]
+            for mem in mem_list:
+                mem = self.getPageMetaData(mem)
+            return mem_list
+        else:
+            print "not set up to get " + self.mem_type + " category members yet"
+
+    def getPageMetaData(self, mempage): #Need to make this a call to profiles.py.
+        """
+        Gets some additional metadata about each page.
+        Currently just the local talkpage id or subjectid and the full url.
+        """
+        params = {
+            'action': 'query',
+            'titles': mempage['page path'],
+            'prop': 'info',
+            'inprop' : 'talkid|subjectid|url'
+        }
+        response = self.site.api(**params)
+#        pageid = str(mempage['page id']) # don't think we need this w/mwclient
+        try:
+            mempage['talkpage id'] = str(response['query']['pages'][pageid]['talkid'])
+        except KeyError:
+            mempage['talkpage id'] = "" #probably not necessary anymore, if I add these default params in to every one anyway.
+        return mempage

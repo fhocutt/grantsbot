@@ -15,14 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import operator
+import sys
 
 import grantsbot_settings
 import categories
-import operator
 import output_settings
 import profiles
-import sys
 import templates
+import tools
 
 ###FUNCTIONS###
 def makeGuide():
@@ -33,7 +34,8 @@ def makeGuide():
     member_list = tools.excludeSubpages(member_list, 'page path', depth=2) #excluding translated subpages
     for member in member_list:
         member = getMemberData(member)
-    member_list = tools.setTimeValues(member_list, val = params[params['subtype']]['time value'])
+    member_list = tools.setTimeValues(member_list,
+        val=params[params['subtype']]['time value'])
     member_list = tools.addDefaults(member_list)
     member_list.sort(key=operator.itemgetter('datetime'), reverse=True)
     if params['subtype'] == 'new':
@@ -56,9 +58,11 @@ def getMembers():
     return member_list
 
 def getMemberData(member):
-    profile = profiles.Profiles(member['page path'], id=member['page id'], settings = params)
+    profile = profiles.Profiles(member['page path'], id=member['page id'],
+                                settings=params)
     infobox = profile.getPageText(0) #zero is the top section
-    member = profile.scrapeInfobox(member, infobox, redict = params['infobox params'])
+    member = profile.scrapeInfobox(member, infobox,
+                                   redict=params['infobox params'])
     revs = []
     main_revs = profile.getPageEditInfo()
     revs.extend(main_revs)
@@ -83,7 +87,8 @@ def prepOutput(member_list):
         member['profile'] = output.formatProfile(member)
     all_profiles = params['header template'] + '\n'.join(member['profile'] for member in member_list)
     edit_summ = params['edit summary'] % (params['type'] + " " + params['subtype'])
-    output.publishProfile(all_profiles, params['output path'], edit_summ, sb_page = params[params['subtype']]['subpage'])
+    output.publishProfile(all_profiles, params['output path'], edit_summ,
+                          sb_page = params[params['subtype']]['subpage'])
 
 
 ###MAIN###
@@ -91,6 +96,4 @@ param = output_settings.Params()
 params = param.getParams(sys.argv[1])
 params['type'] = sys.argv[1]
 params['subtype'] = sys.argv[2]
-tools = profiles.Toolkit()
 makeGuide()
-
